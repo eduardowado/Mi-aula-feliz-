@@ -3,175 +3,188 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Mi Aula Feliz - Pizarra Mágica</title>
+  <title>Mi Aula Feliz - Edición Grabadora Pro</title>
   <style>
-    /* --- CONFIGURACIÓN BASE PARA DISEÑO FLEXIBLE --- */
+    /* --- CONFIGURACIÓN BASE RESPONSIVA --- */
     * {
       box-sizing: border-box;
       user-select: none;
       -webkit-user-select: none;
-      touch-action: none; /* Bloquea el movimiento de la página al dibujar */
+    }
+
+    /* Bloqueo táctil exclusivo para las zonas de juego libre */
+    canvas, .piano-key {
+      touch-action: none;
     }
 
     body {
-      margin: 0;
-      padding: 0;
-      width: 100vw;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      background-color: #FFFDE7;
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      display: flex; flex-direction: column;
+      background-color: #FFFDE7; /* Amarillo pastel tierno */
       font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
       overflow: hidden;
     }
 
-    /* TÍTULO DE LA APP */
+    /* --- BARRA DESLIZADORA INFANTIL ULTRA-VISIBLE (LADO DERECHO) --- */
+    ::-webkit-scrollbar {
+      width: 16px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #FFFDE7;
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: #FFB74D; /* Naranja pastel */
+      border-radius: 10px;
+      border: 3px solid #FFFDE7;
+    }
+
+    /* ENCABEZADO DE LA APP */
     header {
       background: linear-gradient(135deg, #FF5722 0%, #FF7043 100%);
-      color: white;
-      text-align: center;
-      padding: 10px 0;
-      font-size: 26px;
-      font-weight: bold;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-      z-index: 10;
+      color: white; text-align: center;
+      padding: 12px 0; font-size: 28px; font-weight: bold;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15); z-index: 10;
+      flex-shrink: 0;
     }
 
-    /* PIZARRA GIGANTE ADAPTATIVA */
-    #canvas-container {
-      flex: 1; /* Esto hace que ocupe todo el espacio libre de la pantalla */
-      position: relative;
-      background-color: white;
-      box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
-    }
-
-    canvas {
+    /* GESTOR DE PANTALLAS CON DESLIZAMIENTO */
+    .screen {
+      display: none;
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    /* BARRA DE HERRAMIENTAS INTELIGENTE */
-    #toolbar {
-      background-color: #2c3e50;
-      display: flex;
+      top: 60px; left: 0; right: 0; bottom: 0;
+      padding: 20px;
+      overflow-y: auto; 
       flex-direction: column;
-      gap: 8px;
-      padding: 10px;
-      box-shadow: 0 -4px 15px rgba(0,0,0,0.2);
-      z-index: 10;
-    }
-
-    .toolbar-row {
-      display: flex;
-      justify-content: center;
       align-items: center;
-      flex-wrap: wrap; /* Si los botones no caben, bajan ordenadamente */
-      gap: 8px;
-      width: 100%;
     }
+    .screen.active { display: flex; }
 
-    /* ESTILO DE BOTONES */
-    .btn {
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    /* BOTÓN REGRESAR UNIVERSAL */
+    .btn-back {
+      position: sticky; top: 0; align-self: flex-start;
+      background-color: #cfd8dc; color: #37474f;
+      border: none; border-radius: 50px; padding: 10px 22px;
+      font-size: 15px; font-weight: bold; cursor: pointer; z-index: 20;
+      box-shadow: 0 4px rgba(0,0,0,0.1); margin-bottom: 15px;
+      flex-shrink: 0;
+    }
+    .btn-back:active { transform: scale(0.95); }
+
+    /* --- MENÚ PRINCIPAL --- */
+    .menu-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;
+      width: 100%; max-width: 750px; padding: 10px; margin-top: auto; margin-bottom: auto;
+    }
+    .btn-main-menu {
+      border: none; border-radius: 25px; font-size: 20px; font-weight: bold;
+      color: white; padding: 30px 15px; cursor: pointer;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
       transition: transform 0.1s;
-      color: white;
     }
-    .btn:active {
-      transform: scale(0.9);
-    }
+    .btn-main-menu:active { transform: scale(0.95); }
+    .btn-main-menu span { font-size: 40px; }
+    
+    .bg-pizarra { background: linear-gradient(135deg, #2196F3, #1976D2); }
+    .bg-numeros { background: linear-gradient(135deg, #FF9800, #F57C00); }
+    .bg-letras  { background: linear-gradient(135deg, #E91E63, #C2185B); }
+    .bg-vocales { background: linear-gradient(135deg, #9C27B0, #7B1FA2); }
+    .bg-piano   { background: linear-gradient(135deg, #00BCD4, #0097A7); }
+    .bg-config  { background: linear-gradient(135deg, #607D8B, #455A64); grid-column: span 2; } /* Botón ancho de papás */
 
-    .btn-tool {
-      background-color: #455a64;
-      padding: 10px 16px;
-      font-size: 14px;
-      font-weight: bold;
-      gap: 4px;
+    /* --- TARJETAS DEL ABECEDARIO COMPLETO Y VOCALES --- */
+    .abc-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 15px; width: 100%; max-width: 850px; padding-bottom: 30px;
     }
-    .btn-tool.active {
-      background-color: #0078d4;
-      box-shadow: 0 0 8px #00bcd4;
+    .abc-card {
+      background: white; border: 4px dashed #ccc; border-radius: 20px;
+      padding: 15px 10px; display: flex; flex-direction: column;
+      align-items: center; justify-content: space-between; cursor: pointer;
+      box-shadow: 0 5px 10px rgba(0,0,0,0.05); transition: transform 0.15s;
+      min-height: 190px;
     }
-    .btn-clear {
-      background-color: #d32f2f;
-      padding: 10px 16px;
-      font-size: 14px;
-      font-weight: bold;
-    }
+    .abc-card:active { transform: scale(0.93); background-color: #f9f9f9; }
+    .abc-letters { font-size: 38px; font-weight: bold; margin-bottom: 5px; }
+    .abc-icon { font-size: 50px; margin: 5px 0; }
+    .abc-word { font-size: 18px; font-weight: bold; color: #37474f; }
 
-    /* CRAYONES DE COLORES VIVOS */
-    .btn-color {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      border: 3px solid transparent;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    /* --- NÚMEROS GIGANTES --- */
+    .numbers-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px;
+      width: 100%; max-width: 700px; padding-bottom: 30px;
     }
-    .btn-color.active {
-      border-color: white;
-      transform: scale(1.1);
-      box-shadow: 0 0 10px rgba(255,255,255,0.8);
+    .btn-number-giant {
+      background: white; border: 4px solid #FF9800; border-radius: 20px;
+      font-size: 50px; font-weight: bold; color: #e65100; cursor: pointer;
+      padding: 20px 0; box-shadow: 0 5px rgba(0,0,0,0.1);
+      display: flex; align-items: center; justify-content: center;
     }
+    .btn-number-giant:active { transform: scale(0.9); background-color: #fff3e0; }
 
-    /* SELECTOR ARCOÍRIS ESTILO POWERPOINT */
-    .color-picker-wrapper {
-      position: relative;
-      width: 44px;
-      height: 44px;
-      overflow: hidden;
-      border-radius: 50%;
-      background: linear-gradient(45deg, red, orange, yellow, green, blue, purple);
-      border: 3px solid transparent;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    /* --- PIANITO DE COLORES REAL --- */
+    .piano-wrapper {
+      width: 100%; max-width: 800px; height: 55vh; min-height: 250px;
+      display: flex; gap: 6px; background-color: #333;
+      padding: 10px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      margin-top: auto; margin-bottom: auto;
     }
-    .color-picker-wrapper.active {
-      border-color: white;
-      transform: scale(1.1);
+    .piano-key {
+      flex: 1; display: flex; flex-direction: column; justify-content: flex-end;
+      align-items: center; padding-bottom: 20px; font-size: 18px; font-weight: bold;
+      color: white; border: none; border-radius: 0 0 15px 15px; cursor: pointer;
+      box-shadow: inset 0 -8px 0 rgba(0,0,0,0.2), 0 4px rgba(0,0,0,0.2);
     }
-    #advanced-color-picker {
-      position: absolute;
-      top: -10px; left: -10px;
-      width: 70px; height: 70px;
-      cursor: pointer;
-      opacity: 0;
-    }
-    .rainbow-icon {
-      position: absolute;
-      font-size: 20px;
-      pointer-events: none;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-    }
+    .piano-key:active { transform: translateY(4px); box-shadow: inset 0 -2px 0 rgba(0,0,0,0.2); }
 
-    /* --- ADAPTACIÓN AUTOMÁTICA PARA CELULARES (Pantallas Chicas) --- */
+    /* --- ENTORNO DE PIZARRA --- */
+    #canvas-container { width: 100%; flex: 1; position: relative; background-color: white; min-height: 300px; }
+    canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; z-index: 2; }
+    #toolbar { background-color: #2c3e50; display: flex; flex-direction: column; gap: 6px; padding: 8px; z-index: 10; width: 100%; flex-shrink: 0; }
+    .toolbar-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; }
+    .btn-tool { background-color: #455a64; padding: 8px 14px; font-size: 13px; font-weight: bold; color: white; border: none; border-radius: 10px; cursor: pointer; }
+    .btn-tool.active { background-color: #0078d4; box-shadow: 0 0 8px #00bcd4; }
+    .btn-clear { background-color: #d32f2f; padding: 8px 14px; font-size: 13px; font-weight: bold; border: none; border-radius: 10px; color: white; cursor: pointer; }
+    .btn-color { width: 36px; height: 38px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
+    .btn-color.active { border-color: white; transform: scale(1.15); }
+    .color-picker-wrapper { position: relative; width: 36px; height: 38px; overflow: hidden; border-radius: 50%; background: linear-gradient(45deg, red, orange, yellow, green, blue, purple); }
+    #advanced-color-picker { position: absolute; top: -10px; left: -10px; width: 60px; height: 60px; cursor: pointer; opacity: 0; }
+    .rainbow-icon { position: absolute; font-size: 18px; pointer-events: none; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+    /* --- SUB-NAVEGACIONES --- */
+    .sub-nav { display: flex; gap: 10px; margin-bottom: 15px; z-index: 5; flex-wrap: wrap; justify-content: center; flex-shrink: 0; }
+    .sub-tab-btn { border: none; padding: 10px 16px; font-size: 14px; font-weight: bold; border-radius: 12px; background: #e0e0e0; cursor: pointer; color: #333; }
+    .sub-tab-btn.active { background: #FF5722; color: white; }
+    .grid-content { width: 100%; display: none; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 750px; padding-bottom: 20px; }
+    .grid-content.active { display: grid; }
+
+    /* --- ESTILOS DE LA ZONA DE CONFIGURACIÓN DE PAPÁS --- */
+    .config-list { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 30px; }
+    .config-row { background: white; border-radius: 15px; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; border: 2px solid #b0bec5; box-shadow: 0 4px rgba(0,0,0,0.02); }
+    .config-info { font-weight: bold; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+    .config-status { font-size: 12px; font-weight: bold; padding: 3px 8px; border-radius: 8px; margin-left: 5px; }
+    .status-default { background-color: #eceff1; color: #607d8b; }
+    .status-custom { background-color: #e8f5e9; color: #2e7d32; }
+    .config-actions { display: flex; gap: 6px; }
+    .btn-record { background-color: #2196F3; color: white; border: none; padding: 8px 12px; font-weight: bold; border-radius: 8px; cursor: pointer; }
+    .btn-record.recording { background-color: #d32f2f; animation: pulse 1s infinite; }
+    .btn-delete { background-color: #ef5350; color: white; border: none; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+    
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+    /* RESPONSIVIDAD GENERAL */
+    @media (max-width: 768px) { .abc-grid, .grid-content { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 600px) {
-      header {
-        font-size: 20px;
-        padding: 6px 0;
-      }
-      #toolbar {
-        padding: 6px;
-        gap: 6px;
-      }
-      .btn-tool, .btn-clear {
-        padding: 8px 12px;
-        font-size: 12px;
-      }
-      .btn-color, .color-picker-wrapper {
-        width: 34px; /* Se encogen un poco en celular para no robar espacio */
-        height: 34px;
-      }
-      .rainbow-icon {
-        font-size: 16px;
-      }
+      .menu-grid { grid-template-columns: 1fr; gap: 10px; }
+      .bg-config { grid-column: span 1; }
+      .btn-main-menu { font-size: 18px; padding: 16px; }
+      .numbers-grid { grid-template-columns: repeat(2, 1fr); }
+      .btn-number-giant { font-size: 38px; padding: 12px 0; }
+      .piano-key { font-size: 12px; padding-bottom: 10px; }
+      .btn-color { width: 28px; height: 28px; }
+      .config-row { flex-direction: column; gap: 10px; align-items: flex-start; }
+      .config-actions { width: 100%; justify-content: flex-end; }
     }
   </style>
 </head>
@@ -179,171 +192,423 @@
 
   <header>🎨 Mi Aula Feliz ✨</header>
 
-  <div id="canvas-container">
-    <canvas id="pizarra"></canvas>
+  <!-- ================= PANTALLA 1: MENÚ PRINCIPAL ================= -->
+  <div id="screen-menu" class="screen active" style="overflow: hidden;">
+    <div class="menu-grid">
+      <button class="btn-main-menu bg-pizarra" onclick="openPizarraLibre()"><span>🎨</span> Pizarra Libre</button>
+      <button class="btn-main-menu bg-piano" onclick="openPiano()"><span>🎹</span> Pianito Mágico</button>
+      <button class="btn-main-menu bg-numeros" onclick="openNumbersMenu()"><span>🔢</span> Números 1-10</button>
+      <button class="btn-main-menu bg-letras" onclick="openLetrasMenu()"><span>🔤</span> El Abecedario</button>
+      <button class="btn-main-menu bg-vocales" onclick="openVocalesMenu()"><span>🅰️</span> Las Vocales</button>
+      <button class="btn-main-menu bg-config" onclick="openConfigMenu()"><span>⚙️</span> Zona de Papás (Grabar Tu Voz)</button>
+    </div>
   </div>
 
-  <div id="toolbar">
+  <!-- ================= PANTALLA 2: NÚMEROS GIGANTES ================= -->
+  <div id="screen-numeros" class="screen">
+    <button class="btn-back" onclick="showScreen('screen-menu')">⬅️ Menú Principal</button>
+    <h2 style="color:#e65100; margin-bottom:20px; text-align:center;">¡Vamos a contar! 🔢</h2>
+    <div class="numbers-grid" id="container-numbers"></div>
+  </div>
+
+  <!-- ================= PANTALLA 3: ABECEDARIO COMPLETO ================= -->
+  <div id="screen-abecedario" class="screen">
+    <button class="btn-back" onclick="showScreen('screen-menu')">⬅️ Menú Principal</button>
+    <div class="abc-grid" id="container-abecedario"></div>
+  </div>
+
+  <!-- ================= PANTALLA 4: VOCALES EXCLUSIVAS ================= -->
+  <div id="screen-vocales" class="screen">
+    <button class="btn-back" onclick="showScreen('screen-menu')">⬅️ Menú Principal</button>
+    <div class="abc-grid" id="container-vocales"></div>
+  </div>
+
+  <!-- ================= PANTALLA 5: PIANITO DE COLORES ================= -->
+  <div id="screen-piano" class="screen" style="overflow: hidden;">
+    <button class="btn-back" onclick="showScreen('screen-menu')">⬅️ Menú</button>
+    <div class="piano-wrapper">
+      <button class="piano-key" style="background-color: #FF0000;" onpointerdown="hitKey(261.63)">DO</button>
+      <button class="piano-key" style="background-color: #FF6600;" onpointerdown="hitKey(293.66)">RE</button>
+      <button class="piano-key" style="background-color: #FFFF00; color: #333;" onpointerdown="hitKey(329.63)">MI</button>
+      <button class="piano-key" style="background-color: #008000;" onpointerdown="hitKey(349.23)">FA</button>
+      <button class="piano-key" style="background-color: #00FFFF; color: #333;" onpointerdown="hitKey(392.00)">SOL</button>
+      <button class="piano-key" style="background-color: #0000FF;" onpointerdown="hitKey(440.00)">LA</button>
+      <button class="piano-key" style="background-color: #9c27b0;" onpointerdown="hitKey(493.88)">SI</button>
+      <button class="piano-key" style="background-color: #D81B60;" onpointerdown="hitKey(523.25)">DO</button>
+    </div>
+  </div>
+
+  <!-- ================= PANTALLA 6: CONFIGURACIÓN / GRABACIONES PAPÁS ================= -->
+  <div id="screen-config" class="screen">
+    <button class="btn-back" onclick="showScreen('screen-menu')">⬅️ Menú Principal</button>
+    <h2 style="color:#455A64; margin-bottom:5px; text-align:center;">🎙️ Grabadora para Papás</h2>
+    <p style="color:#78909c; font-size:14px; text-align:center; margin-bottom:15px; margin-top:0;">Graba tu propia voz. Si no grabas nada, sonará la maestra por defecto.</p>
     
-    <div class="toolbar-row">
-      <button id="tool-pincel" class="btn btn-tool active" onclick="setTool('pincel')">✏️ Pincelín</button>
-      <button id="tool-marcador" class="btn btn-tool" onclick="setTool('marcador')">🖍️ Marcador</button>
-      <button id="tool-borrador" class="btn btn-tool" onclick="setTool('borrador')">🧽 Borrar</button>
-      <button class="btn btn-clear" onclick="clearAll()">🗑️ Limpiar Todo</button>
+    <div class="sub-nav">
+      <button id="tab-c-colores" class="sub-tab-btn active" onclick="switchConfigTab('colores')">🎨 Colores</button>
+      <button id="tab-c-numeros" class="sub-tab-btn" onclick="switchConfigTab('numeros')">🔢 Números</button>
+      <button id="tab-c-letras" class="sub-tab-btn" onclick="switchTabConfigLetras('abc')">🔤 Abecedario</button>
+      <button id="tab-c-vocales" class="sub-tab-btn" onclick="switchTabConfigLetras('vocales')">🅰️ Vocales</button>
     </div>
 
-    <div class="toolbar-row">
-      <button class="btn btn-color active" style="background-color: #FF0000;" onclick="setColor(this, '#FF0000', 'Rojo')"></button>
-      <button class="btn btn-color" style="background-color: #FFFF00;" onclick="setColor(this, '#FFFF00', 'Amarillo')"></button>
-      <button class="btn btn-color" style="background-color: #0000FF;" onclick="setColor(this, '#0000FF', 'Azul')"></button>
-      <button class="btn btn-color" style="background-color: #FF6600;" onclick="setColor(this, '#FF6600', 'Naranja')"></button>
-      <button class="btn btn-color" style="background-color: #008000;" onclick="setColor(this, '#008000', 'Verde')"></button>
-      <button class="btn btn-color" style="background-color: #8B4513;" onclick="setColor(this, '#8B4513', 'Café')"></button>
-      <button class="btn btn-color" style="background-color: #D81B60;" onclick="setColor(this, '#D81B60', 'Rosa')"></button>
-      <button class="btn btn-color" style="background-color: #5E005E;" onclick="setColor(this, '#5E005E', 'Morado')"></button>
-      <button class="btn btn-color" style="background-color: #00FFFF;" onclick="setColor(this, '#00FFFF', 'Celeste')"></button>
-      <button class="btn btn-color" style="background-color: #666666;" onclick="setColor(this, '#666666', 'Gris')"></button>
-      <button class="btn btn-color" style="background-color: #000000;" onclick="setColor(this, '#000000', 'Negro')"></button>
-      <button class="btn btn-color" style="background-color: #ffffff; border: 2px solid #ccc;" onclick="setColor(this, '#ffffff', 'Blanco')"></button>
-      
-      <div id="color-advanced-wrapper" class="color-picker-wrapper">
-        <span class="rainbow-icon">🌈</span>
-        <input type="color" id="advanced-color-picker" onchange="setAdvancedColor(this.value)">
+    <div id="area-c-colores" class="config-list active"></div>
+    <div id="area-c-numeros" class="config-list"></div>
+    <div id="area-c-abc" class="config-list"></div>
+    <div id="area-c-vocales" class="config-list"></div>
+  </div>
+
+  <!-- ================= PANTALLA 7: ENTORNO DE PIZARRA INFANTIL ================= -->
+  <div id="screen-pizarra" class="screen" style="overflow: hidden; padding: 0;">
+    <button class="btn-back" style="position: absolute; top: 10px; left: 10px;" onclick="showScreen('screen-menu')">⬅️ Menú</button>
+    <div id="canvas-container">
+      <canvas id="pizarra"></canvas>
+    </div>
+    <div id="toolbar">
+      <div class="toolbar-row">
+        <button id="tool-pincel" class="btn btn-tool active" onclick="setTool('pincel')">✏️ Pincelín</button>
+        <button id="tool-marcador" class="btn btn-tool" onclick="setTool('marcador')">🖍️ Marcador</button>
+        <button id="tool-borrador" class="btn btn-tool" onclick="setTool('borrador')">🧽 Borrar</button>
+        <button class="btn btn-clear" onclick="clearAll()">🗑️ Limpiar Todo</button>
+      </div>
+      <div class="toolbar-row">
+        <button class="btn btn-color active" style="background-color: #FF0000;" onclick="playItemSound('color_Rojo', 'Rojo')"></button>
+        <button class="btn btn-color" style="background-color: #FFFF00;" onclick="playItemSound('color_Amarillo', 'Amarillo')"></button>
+        <button class="btn btn-color" style="background-color: #0000FF;" onclick="playItemSound('color_Azul', 'Azul')"></button>
+        <button class="btn btn-color" style="background-color: #FF6600;" onclick="playItemSound('color_Naranja', 'Naranja')"></button>
+        <button class="btn btn-color" style="background-color: #008000;" onclick="playItemSound('color_Verde', 'Verde')"></button>
+        <button class="btn btn-color" style="background-color: #8B4513;" onclick="playItemSound('color_Café', 'Café')"></button>
+        <button class="btn btn-color" style="background-color: #D81B60;" onclick="playItemSound('color_Rosa', 'Rosa')"></button>
+        <button class="btn btn-color" style="background-color: #5E005E;" onclick="playItemSound('color_Morado', 'Morado')"></button>
+        <button class="btn btn-color" style="background-color: #00FFFF;" onclick="playItemSound('color_Celeste', 'Celeste')"></button>
+        <button class="btn btn-color" style="background-color: #666666;" onclick="playItemSound('color_Gris', 'Gris')"></button>
+        <button class="btn btn-color" style="background-color: #000000;" onclick="playItemSound('color_Negro', 'Negro')"></button>
+        <button class="btn btn-color" style="background-color: #ffffff; border: 2px solid #ccc;" onclick="playItemSound('color_Blanco', 'Blanco')"></button>
+        <div id="color-advanced-wrapper" class="color-picker-wrapper"><span class="rainbow-icon">🌈</span><input type="color" id="advanced-color-picker" onchange="setAdvancedColor(this.value)"></div>
       </div>
     </div>
-
   </div>
 
   <script>
-    // --- Configuración y Redimensionamiento Seguro ---
-    const canvas = document.getElementById('pizarra');
-    const ctx = canvas.getContext('2d');
-    const container = document.getElementById('canvas-container');
+    // --- MAPA DE DATOS DEL ABECEDARIO ---
+    const databaseAbecedario = [
+      { id: "letra_Aa", letter: "Aa", word: "Árbol", emoji: "🌳", voice: "A de Árbol", borderColor: "#FF5722", letterColor: "#03A9F4" },
+      { id: "letra_Bb", letter: "Bb", word: "Barco", emoji: "⛵", voice: "B de Barco", borderColor: "#4CAF50", letterColor: "#4CAF50" },
+      { id: "letra_Cc", letter: "Cc", word: "Carro", emoji: "🚗", voice: "C de Carro", borderColor: "#03A9F4", letterColor: "#00BCD4" },
+      { id: "letra_Dd", letter: "Dd", word: "Dona", emoji: "🍩", voice: "D de Dona", borderColor: "#9C27B0", letterColor: "#4CAF50" },
+      { id: "letra_Ee", letter: "Ee", word: "Elefante", emoji: "🐘", voice: "E de Elefante", borderColor: "#E91E63", letterColor: "#FF9800" },
+      { id: "letra_Ff", letter: "Ff", word: "Foca", emoji: "🦭", voice: "F de Foca", borderColor: "#00BCD4", letterColor: "#2196F3" },
+      { id: "letra_Gg", letter: "Gg", word: "Gato", emoji: "🐱", voice: "G de Gato", borderColor: "#FF9800", letterColor: "#03A9F4" },
+      { id: "letra_Hh", letter: "Hh", word: "Hipopótamo", emoji: "🦛", voice: "H de Hipopótamo", borderColor: "#9C27B0", letterColor: "#9C27B0" },
+      { id: "letra_Ii", letter: "Ii", word: "Isla", emoji: "🏝️", voice: "I de Isla", borderColor: "#03A9F4", letterColor: "#FFEB3B" },
+      { id: "letra_Jj", letter: "Jj", word: "Jaula", emoji: "🦜", voice: "J de Jaula", borderColor: "#FF5722", letterColor: "#FF5722" },
+      { id: "letra_Kk", letter: "Kk", word: "Koala", emoji: "🐨", voice: "K de Koala", borderColor: "#4CAF50", letterColor: "#9C27B0" },
+      { id: "letra_Ll", letter: "Ll", word: "Limonada", emoji: "🍋", voice: "L de Limonada", borderColor: "#FFEB3B", letterColor: "#4CAF50" },
+      { id: "letra_Llll", letter: "Ll ll", word: "Llave", emoji: "🔑", voice: "Elle de Llave", borderColor: "#E91E63", letterColor: "#03A9F4" },
+      { id: "letra_Mm", letter: "Mm", word: "Mono", emoji: "🐒", voice: "M de Mono", borderColor: "#4CAF50", letterColor: "#FF2A2A" },
+      { id: "letra_Nn", letter: "Nn", word: "Nido", emoji: "🪺", voice: "N de Nido", borderColor: "#FF5722", letterColor: "#FF9800" },
+      { id: "letra_Ññ", letter: "Ññ", word: "Ñoño", emoji: "👦", voice: "Eñe de Ñoño", borderColor: "#FFEB3B", letterColor: "#FF5722" },
+      { id: "letra_Oo", letter: "Oo", word: "Oso", emoji: "🐻", voice: "O de Oso", borderColor: "#4CAF50", letterColor: "#E91E63" },
+      { id: "letra_Pp", letter: "Pp", word: "Pingüino", emoji: "🐧", voice: "P de Pingüino", borderColor: "#00BCD4", letterColor: "#2196F3" },
+      { id: "letra_Qq", letter: "Qq", word: "Queso", emoji: "🧀", voice: "Q de Queso", borderColor: "#FF9800", letterColor: "#03A9F4" },
+      { id: "letra_Rr", word: "Ratón", emoji: "🐭", voice: "R de Ratón", borderColor: "#9C27B0", letterColor: "#FF2A2A" },
+      { id: "letra_Ss", letter: "Ss", word: "Sol", emoji: "☀️", voice: "S de Sol", borderColor: "#E91E63", letterColor: "#4CAF50" },
+      { id: "letra_Tt", letter: "Tt", word: "Tortuga", emoji: "🐢", voice: "T de Tortuga", borderColor: "#FF5722", letterColor: "#00BCD4" },
+      { id: "letra_Uu", letter: "Uu", word: "Uvas", emoji: "🍇", voice: "U de Uvas", borderColor: "#9C27B0", letterColor: "#9C27B0" },
+      { id: "letra_Vv", letter: "Vv", word: "Volcán", emoji: "🌋", voice: "V de Volcán", borderColor: "#4CAF50", letterColor: "#4CAF50" },
+      { id: "letra_Ww", letter: "Ww", word: "Wenceslao", emoji: "🤠", voice: "Doble ve de Wenceslao", borderColor: "#FF2A2A", letterColor: "#4CAF50" },
+      { id: "letra_Xx", letter: "Xx", word: "Xóchitl", emoji: "👧", voice: "Equis de Xóchitl", borderColor: "#4CAF50", letterColor: "#2196F3" },
+      { id: "letra_Yy", letter: "Yy", word: "Yo-yo", emoji: "🪀", voice: "Ye de Yo-yo", borderColor: "#9C27B0", letterColor: "#9C27B0" },
+      { id: "letra_Zz", letter: "Zz", word: "Zorro", emoji: "🦊", voice: "Zeta de Zorro", borderColor: "#FF2A2A", letterColor: "#4CAF50" }
+    ];
+    const vocalesLista = ["Aa", "Ee", "Ii", "Oo", "Uu"];
+    const coloresLista = [
+      { id:"color_Rojo", label:"🔴 Rojo", txt:"Rojo" }, { id:"color_Amarillo", label:"🟡 Amarillo", txt:"Amarillo" },
+      { id:"color_Azul", label:"🔵 Azul", txt:"Azul" }, { id:"color_Naranja", label:"🟠 Naranja", txt:"Naranja" },
+      { id:"color_Verde", label:"🟢 Verde", txt:"Verde" }, { id:"color_Café", label:"🟤 Café", txt:"Café" },
+      { id:"color_Rosa", label:"🌸 Rosa", txt:"Rosa" }, { id:"color_Morado", label:"🟣 Morado", txt:"Morado" },
+      { id:"color_Celeste", label:"🌐 Celeste", txt:"Celeste" }, { id:"color_Gris", label:"⚪ Gris", txt:"Gris" },
+      { id:"color_Negro", label:"⚫ Negro", txt:"Negro" }, { id:"color_Blanco", label:"⬜ Blanco", txt:"Blanco" }
+    ];
 
-    let isDrawing = false;
-    let lastX = 0; let lastY = 0;
-    
-    let currentSettings = {
-      color: '#FF0000',
-      tool: 'pincel'
+    // --- BASE DE DATOS LOCAL INTERNA INDEXEDDB ---
+    let db = null;
+    let customAudioKeys = new Set(); // Guarda registro de qué items tienen audio propio
+
+    const dbRequest = indexedDB.open("AulaFelizVoiceDB", 1);
+    dbRequest.onupgradeneeded = (e) => {
+      let database = e.target.result;
+      database.createObjectStore("voices", { keyPath: "id" });
+    };
+    dbRequest.onsuccess = (e) => {
+      db = e.target.result;
+      refreshCustomAudioCache();
     };
 
-    // Esta función salva el dibujo si el usuario voltea la tablet o cambia el tamaño en laptop
-    function resizeCanvas() {
-      const tempCanvas = document.createElement('canvas');
-      const tempCtx = tempCanvas.getContext('2d');
-      tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
-      tempCtx.drawImage(canvas, 0, 0);
-
-      canvas.width = container.clientWidth;
-      canvas.height = container.clientHeight;
-
-      ctx.drawImage(tempCanvas, 0, 0);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+    function refreshCustomAudioCache() {
+      if(!db) return;
+      customAudioKeys.clear();
+      const tx = db.transaction("voices", "readonly");
+      tx.objectStore("voices").getAllKeys().onsuccess = (e) => {
+        e.target.result.forEach(key => customAudioKeys.add(key));
+        updateConfigBadges();
+      };
     }
 
-    window.addEventListener('resize', resizeCanvas);
-    setTimeout(resizeCanvas, 150);
+    // --- NAVEGACIÓN ---
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      window.speechSynthesis.cancel();
+    }
+    function openPizarraLibre() { showScreen('screen-pizarra'); setTimeout(resizeCanvas, 60); cleanCanvas(); playItemSound('system_libre', 'Pizarra libre'); }
+    function openNumbersMenu() { showScreen('screen-numeros'); speakKinder("Vamos a contar"); }
+    function openLetrasMenu() { showScreen('screen-abecedario'); speakKinder("El abecedario"); }
+    function openVocalesMenu() { showScreen('screen-vocales'); speakKinder("Las vocales"); }
+    function openConfigMenu() { showScreen('screen-config'); renderConfigItems(); speakKinder("Configuración de voz"); }
 
-    // --- Motor de Voz Infantil ---
+    // --- REPRODUCTOR INTELIGENTE: AUDIO PROPIO VS MAESTRA ---
+    function playItemSound(id, defaultText) {
+      // Activar borde de selección de color en la pizarra
+      if(id.startsWith('color_') && event && event.currentTarget.classList.contains('btn-color')) {
+        document.querySelectorAll('.btn-color, .color-picker-wrapper').forEach(b => b.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        if (currentSettings.tool === 'borrador') setTool('pincel');
+      }
+
+      if (customAudioKeys.has(id) && db) {
+        const tx = db.transaction("voices", "readonly");
+        tx.objectStore("voices").get(id).onsuccess = (e) => {
+          if (e.target.result && e.target.result.blob) {
+            window.speechSynthesis.cancel();
+            const audioUrl = URL.createObjectURL(e.target.result.blob);
+            const audio = new Audio(audioUrl);
+            audio.play();
+          } else { speakKinder(defaultText); }
+        };
+      } else {
+        speakKinder(defaultText);
+      }
+    }
+
+    // --- MOTOR LATINO MAESTRA ALEGRE (FALLBACK) ---
+    let maestraVoice = null;
+    function encontrarVozMaestra() {
+      if ('speechSynthesis' in window) {
+        const voices = window.speechSynthesis.getVoices();
+        const nombresMaestras = ["Google español", "es-MX", "es-419", "Paulina", "Monica", "Sofia"];
+        for (let nombre of nombresMaestras) {
+          maestraVoice = voices.find(v => v.name.includes(nombre) || v.lang.includes(nombre));
+          if (maestraVoice) break;
+        }
+        if (!maestraVoice) maestraVoice = voices.find(v => v.lang.startsWith('es'));
+      }
+    }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = encontrarVozMaestra;
+      encontrarVozMaestra();
+    }
+
     function speakKinder(text) {
       if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel(); 
+        window.speechSynthesis.cancel();
         const msg = new SpeechSynthesisUtterance(text);
-        msg.lang = 'es-MX';
-        msg.rate = 0.88; 
-        msg.pitch = 1.35; 
+        if (maestraVoice) msg.voice = maestraVoice;
+        msg.lang = 'es-MX'; msg.rate = 0.88; msg.pitch = 1.35;
         window.speechSynthesis.speak(msg);
       }
     }
 
-    // --- Motor de Trazos Unificados (Dedo, Mouse, Lápiz) ---
-    function getCoords(e) {
-      const rect = canvas.getBoundingClientRect();
-      return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
+    // --- PIANITO REAL ---
+    let audioCtx = null;
+    function hitKey(freq) {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator(); const gainNode = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = freq;
+      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.2);
+      osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + 1.2);
+    }
+
+    // --- GENERACIÓN DINÁMICA DE INTERFACES PARA EL NIÑO ---
+    const containerNumbers = document.getElementById('container-numbers');
+    const containerAbecedario = document.getElementById('container-abecedario');
+    const containerVocales = document.getElementById('container-vocales');
+
+    for(let i = 1; i <= 10; i++) {
+      containerNumbers.innerHTML += `<button class="btn-number-giant" onclick="playItemSound('numero_${i}', '${i}')">${i}</button>`;
+    }
+
+    databaseAbecedario.forEach(item => {
+      const cardHTML = `
+        <div class="abc-card" style="border-color: ${item.borderColor};" onclick="playItemSound('${item.id}', '${item.voice}')">
+          <div class="abc-letters" style="color: ${item.letterColor};">${item.letter}</div>
+          <div class="abc-icon">${item.emoji}</div>
+          <div class="abc-word">${item.word}</div>
+        </div>
+      `;
+      containerAbecedario.innerHTML += cardHTML;
+      if (vocalesLista.includes(item.letter)) containerVocales.innerHTML += cardHTML;
+    });
+
+    // --- SISTEMA DE GRABACIÓN INTERNA PARA PAPÁS (MEDIARECORDER) ---
+    let mediaRecorder = null; let audioChunks = []; let activeRecordingId = null;
+
+    function renderConfigItems() {
+      renderCategoryRows(coloresLista, 'area-c-colores', 'color');
+      // Números
+      let numData = []; for(let i=1; i<=10; i++) numData.push({ id:`numero_${i}`, label:`Número ${i}`, txt:`${i}` });
+      renderCategoryRows(numData, 'area-c-numeros', 'numero');
+      // Abecedario
+      let abcData = databaseAbecedario.map(x => ({ id:x.id, label:`${x.letter} - ${x.word} ${x.emoji}`, txt:x.voice }));
+      renderCategoryRows(abcData, 'area-c-abc', 'letra');
+      // Vocales
+      let vocData = databaseAbecedario.filter(x => vocalesLista.includes(x.letter)).map(x => ({ id:x.id, label:`${x.letter} - ${x.word} ${x.emoji}`, txt:x.voice }));
+      renderCategoryRows(vocData, 'area-c-vocales', 'vocal');
+      
+      updateConfigBadges();
+    }
+
+    function renderCategoryRows(list, containerId, prefix) {
+      const box = document.getElementById(containerId);
+      box.innerHTML = '';
+      list.forEach(item => {
+        box.innerHTML += `
+          <div class="config-row">
+            <div class="config-info">
+              ${item.label}
+              <span class="config-status status-default" id="badge_${item.id}">Voz Normal</span>
+            </div>
+            <div class="config-actions">
+              <button class="btn-record" id="rec_${item.id}" onclick="toggleRecord('${item.id}')">🎙️ Grabar</button>
+              <button class="btn-tool" style="background:#4caf50;" onclick="playItemSound('${item.id}', '${item.txt}')">🎵 Oír</button>
+              <button class="btn-delete" onclick="deleteAudioRecord('${item.id}')">🗑️</button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function updateConfigBadges() {
+      document.querySelectorAll('.config-status').forEach(b => {
+        const id = b.id.replace('badge_', '');
+        if(customAudioKeys.has(id)) { b.innerText = "Tu Voz"; b.className = "config-status status-custom"; }
+        else { b.innerText = "Voz Normal"; b.className = "config-status status-default"; }
+      });
+    }
+
+    async function toggleRecord(id) {
+      const btn = document.getElementById(`rec_${id}`);
+      
+      if (activeRecordingId === id) {
+        // DETENER LA GRABACIÓN ACTUAL
+        mediaRecorder.stop();
+        return;
+      }
+      
+      if (activeRecordingId !== null) return; // Bloquear si hay otra activa
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        activeRecordingId = id;
+        
+        mediaRecorder.ondataavailable = (e) => { if(e.data.size > 0) audioChunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+          const tx = db.transaction("voices", "readwrite");
+          tx.objectStore("voices").put({ id: id, blob: audioBlob });
+          tx.oncomplete = () => {
+            activeRecordingId = null;
+            btn.innerText = "🎙️ Grabar";
+            btn.classList.remove('recording');
+            refreshCustomAudioCache();
+            speakKinder("Guardado");
+          };
+        };
+
+        mediaRecorder.start();
+        btn.innerText = "⏹️ Detener";
+        btn.classList.add('recording');
+      } catch (err) {
+        alert("Por favor dale permisos de micrófono a la app para poder grabar.");
+      }
+    }
+
+    function deleteAudioRecord(id) {
+      if(!db) return;
+      const tx = db.transaction("voices", "readwrite");
+      tx.objectStore("voices").delete(id);
+      tx.oncomplete = () => {
+        refreshCustomAudioCache();
+        speakKinder("Restablecido");
       };
     }
 
-    function startDrawing(e) {
-      isDrawing = true;
-      const pos = getCoords(e);
-      lastX = pos.x; lastY = pos.y;
-      draw(e); 
+    // Manejo de tabs de papás
+    function switchConfigTab(cat) {
+      document.querySelectorAll('#screen-config .sub-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.config-list').forEach(c => c.classList.remove('active'));
+      document.getElementById(`tab-c-${cat}`).classList.add('active');
+      document.getElementById(`area-c-${cat}`).classList.add('active');
+    }
+    function switchTabConfigLetras(target) {
+      document.querySelectorAll('#screen-config .sub-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.config-list').forEach(c => c.classList.remove('active'));
+      document.getElementById(`tab-c-${target}`).classList.add('active');
+      document.getElementById(`area-c-${target}`).classList.add('active');
     }
 
-    function draw(e) {
-      if (!isDrawing) return;
-      const pos = getCoords(e);
-      
-      ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
-      ctx.lineTo(pos.x, pos.y);
-
-      // Comportamiento de Herramientas
-      if (currentSettings.tool === 'borrador') {
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.lineWidth = 45; 
-      } else if (currentSettings.tool === 'marcador') {
-        ctx.globalCompositeOperation = 'source-over';
-        const r = parseInt(currentSettings.color.slice(1, 3), 16);
-        const g = parseInt(currentSettings.color.slice(3, 5), 16);
-        const b = parseInt(currentSettings.color.slice(5, 7), 16);
-        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.45)`; // Semi-transparente estilo PowerPoint
-        ctx.lineWidth = 26;
+    // Tablas de niños
+    function switchTab(section, target) {
+      document.querySelectorAll(`#screen-${section} .sub-tab-btn`).forEach(b => b.classList.remove('active'));
+      document.querySelectorAll(`#screen-${section} .grid-content`).forEach(c => c.classList.remove('active'));
+      if(target === 'contar') {
+        document.getElementById(`tab-${section[0]}-contar`).classList.add('active');
+        document.getElementById(`area-${section[0]}-contar`).classList.add('active');
+        speakKinder("Escuchar");
       } else {
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.strokeStyle = currentSettings.color;
-        ctx.lineWidth = 7;
+        document.getElementById(`tab-${section[0]}-colorear`).classList.add('active');
+        document.getElementById(`area-${section[0]}-colorear`).classList.add('active');
+        speakKinder("Colorear");
       }
-
-      ctx.stroke();
-      [lastX, lastY] = [pos.x, pos.y];
+    }
+    function switchTabLetras(target) {
+      document.querySelectorAll(`#screen-letras .sub-tab-btn`).forEach(b => b.classList.remove('active'));
+      document.querySelectorAll(`#screen-letras .grid-content`).forEach(c => c.classList.remove('active'));
+      if(target === 'abc') { document.getElementById('tab-l-abc').classList.add('active'); document.getElementById('area-l-abc').classList.add('active'); speakKinder("Abecedario"); }
+      else if (target === 'vocales') { document.getElementById('tab-l-vocales').classList.add('active'); document.getElementById('area-l-vocales').classList.add('active'); speakKinder("Las vocales"); }
+      else { document.getElementById('tab-l-colorear').classList.add('active'); document.getElementById('area-l-colorear').classList.add('active'); speakKinder("A colorear"); }
     }
 
-    function stopDrawing() {
-      isDrawing = false;
-      ctx.beginPath();
-    }
+    // --- MOTOR GRÁFICO PIZARRA RESILIENTE ---
+    const canvas = document.getElementById('pizarra'); const ctx = canvas.getContext('2d'); const container = document.getElementById('canvas-container');
+    let isDrawing = false; let lastX = 0; let lastY = 0; let currentSettings = { color: '#FF0000', tool: 'pincel' };
 
-    // Eventos universales compatibles con clics de laptop y gestos táctiles de tablet/celular
-    canvas.addEventListener('pointerdown', startDrawing);
-    window.addEventListener('pointermove', draw);
-    window.addEventListener('pointerup', stopDrawing);
-
-    // --- Controladores de la barra ---
-    function setTool(toolName) {
-      currentSettings.tool = toolName;
-      document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active'));
-      document.getElementById(`tool-${toolName}`).classList.add('active');
+    function resizeCanvas() {
+      if (!container.clientWidth) return;
+      const temp = document.createElement('canvas'); const tCtx = temp.getContext('2d'); temp.width = canvas.width; temp.height = canvas.height; tCtx.drawImage(canvas, 0, 0);
+      canvas.width = container.clientWidth; canvas.height = container.clientHeight; ctx.drawImage(temp, 0, 0); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     }
+    window.addEventListener('resize', resizeCanvas);
+    function getCoords(e) { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+    
+    canvas.addEventListener('pointerdown', (e) => { isDrawing = true; const p = getCoords(e); lastX = p.x; lastY = p.y; draw(e); });
+    window.addEventListener('pointermove', (e) => {
+      if (!isDrawing) return; e.preventDefault(); const p = getCoords(e); ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(p.x, p.y);
+      if (currentSettings.tool === 'borrador') { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 45; } 
+      else if (currentSettings.tool === 'marcador') {
+        ctx.globalCompositeOperation = 'source-over'; const r = parseInt(currentSettings.color.slice(1, 3), 16), g = parseInt(currentSettings.color.slice(3, 5), 16), b = parseInt(currentSettings.color.slice(5, 7), 16);
+        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.45)`; ctx.lineWidth = 26;
+      } else { ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = currentSettings.color; ctx.lineWidth = 7; }
+      ctx.stroke(); [lastX, lastY] = [p.x, p.y];
+    });
+    window.addEventListener('pointerup', () => { isDrawing = false; ctx.beginPath(); });
 
-    function setColor(element, hex, name) {
-      currentSettings.color = hex;
-      if (currentSettings.tool === 'borrador') {
-        setTool('pincel');
-      }
-      document.querySelectorAll('.btn-color, .color-picker-wrapper').forEach(b => b.classList.remove('active'));
-      element.classList.add('active');
-      speakKinder(name);
-    }
-
-    function setAdvancedColor(hex) {
-      currentSettings.color = hex;
-      if (currentSettings.tool === 'borrador') {
-        setTool('pincel');
-      }
-      document.querySelectorAll('.btn-color').forEach(b => b.classList.remove('active'));
-      document.getElementById('color-advanced-wrapper').classList.add('active');
-    }
-
-    function clearAll() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.lineCap = 'round'; ctx.lineJoin = 'round'; 
-      speakKinder("Limpiar todo");
-    }
+    function setTool(t) { currentSettings.tool = t; document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active')); document.getElementById(`tool-${t}`).classList.add('active'); }
+    function setAdvancedColor(hex) { currentSettings.color = hex; if (currentSettings.tool === 'borrador') setTool('pincel'); document.querySelectorAll('.btn-color').forEach(b => b.classList.remove('active')); document.getElementById('color-advanced-wrapper').classList.add('active'); }
+    function clearAll() { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; speakKinder("Limpiar todo"); }
   </script>
 </body>
 </html>
